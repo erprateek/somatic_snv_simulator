@@ -17,7 +17,8 @@ For each simulated pileup, we will determine whether a somatic variant is detect
 
 Parameter table:
 ----------------
-||Parameter||Description||Note||
+|Parameter|Description|Note|
+|---------|-----------|----|
 |k|Number of pileups to simulate||
 |D|Average Total Depth in a pileup|The depth of any one pileup is drawn from a Poisson Distribution with mean D|
 |e|Average sequencing error rate|The number of ALT reads due to noise is drawn from BD(D,e)|
