@@ -1,21 +1,95 @@
 #!/bin/python
+"""
+Script Name: somatic_mutations.py
 
-import matplotlib.pyplot as plt
+Description:
+    Monte-Carlo simulation of somatic mutations in NGS data - AF plots version
+
+Author:
+    Prateek Tandon (prateektandon@alumni.cmu.edu)
+
+Dependencies:
+    - matplotlib
+    - numpy
+    - run_simulation
+
+Usage:
+    python somatic_mutations.py [arguments]
+
+Command-line Arguments:
+    -k, --num_pileups:           Number of pileups to simulate 
+    (default: 10000).
+    -D, --mean_total_depth:      Mean of the Poisson distribution, 
+    from which depth values are drawn (default: 300).
+    -e, --mean_seq_error_rate:   Average sequencing error rate. The 
+    number of ALT reads due to noise is drawn from the Binomial 
+    distribution (default: 0.005).
+    -f, --frac_pileups_with_var: The fraction of pileups with a somatic 
+    variant (default: 0.01).
+    -a, --af:                    The intrinsic Allele Fraction of somatic 
+    variants. The number of ALT reads due to a somatic variant is drawn 
+    from the Binomial distribution. Can accept multiple values (default: 
+    [0.2]).
+    -t, --alt_threshold:         The minimum number of ALTs to trigger a 
+    detection (default: 2).
+    -s, --seed:                  Use a fixed seed to make the script 
+    reproducible.
+
+"""
 import argparse
+import matplotlib.pyplot as plt
 import numpy as np
 from run_simulation import run_simulation_and_gather_metrics
 
-def plot_metrics(allele_fractions, ppas, ppvs):
-    plt.plot(allele_fractions, ppas, label='PPA')
-    plt.plot(allele_fractions, ppvs, label='PPV')
+def plot_metrics(allele_fractions: np.ndarray, 
+                 ppas: np.ndarray, ppvs: np.ndarray) -> None:
+    """
+    Plots the PPA (Positive Predictive Accuracy) and PPV (Positive 
+    Predictive Value) as a function of the somatic allele fraction.
+
+    Args:
+        allele_fractions (np.ndarray): An array of somatic allele fractions.
+        ppas (np.ndarray): An array of corresponding PPA values.
+        ppvs (np.ndarray): An array of corresponding PPV values.
+
+    Returns:
+        None
+
+    """
+    plt.plot(allele_fractions, ppas, label='PPA', marker='o')
+    plt.plot(allele_fractions, ppvs, label='PPV', marker='x')
+    for x, y, z in zip(allele_fractions, ppas, ppvs):
+        plt.axvline(x=x, color='b', linestyle='--', alpha=0.15)
+        plt.axhline(y=y, color='g', linestyle='--', alpha=0.15)
+        plt.axhline(y=z, color='#FFA500', linestyle='--', alpha=0.15)
     plt.xlabel('Allele Fraction')
     plt.ylabel('Score')
+    plt.title('PPA and PPV as a function of the somatic AF')
     plt.legend()
     plt.savefig('Somatic mutation simulation - AF vs PPA and PPV.png', dpi=200)
-
-    
+   
 def main():
-    parser = argparse.ArgumentParser("Monte-Carlo simulation of somatic mutations in NGS data.")
+    """
+    Monte-Carlo simulation of somatic mutations in NGS data - AF plots version.
+
+    This function performs a Monte-Carlo simulation of somatic mutations in 
+    Next-Generation Sequencing (NGS) data. It takes command-line arguments to 
+    configure the simulation parameters and generates plots of PPA (Positive 
+    Predictive Accuracy) and PPV (Positive Predictive Value) as a function 
+    of the somatic allele fraction.
+
+    Command-line Arguments:
+        -k, --num_pileups:          Number of pileups to simulate (default: 10000).
+        -D, --mean_total_depth:     Mean of the Poisson distribution, from which depth values are drawn (default: 300).
+        -e, --mean_seq_error_rate:  Average sequencing error rate. The number of ALT reads due to noise is drawn from the Binomial distribution (default: 0.005).
+        -f, --frac_pileups_with_var: The fraction of pileups with a somatic variant (default: 0.01).
+        -a, --af:                   The intrinsic Allele Fraction of somatic variants. The number of ALT reads due to a somatic variant is drawn from the Binomial distribution. Can accept multiple values (default: [0.2]).
+        -t, --alt_threshold:        The minimum number of ALTs to trigger a detection (default: 2).
+        -s, --seed:                 Use a fixed seed to make the script reproducible.
+
+    """
+    
+    parser = argparse.ArgumentParser("Monte-Carlo simulation of somatic mutations in NGS data - AF plots version")
     parser.add_argument('-k','--num_pileups',          type=int,   default=10000, help='Number of pileups to simulate')
     parser.add_argument('-D','--mean_total_depth',     type=float, default=300,   help='Mean of the Poisson distribution, from which depth values are drawn')
     parser.add_argument('-e','--mean_seq_error_rate',  type=float, default=0.005, help='Average sequencing error rate. The number of ALT reads due to noise is drawn from BD(D,e)')
@@ -34,7 +108,7 @@ def main():
     alt_threshold    = args.alt_threshold
     fv               = args.frac_pileups_with_var
 
-    # Set random seed for reproducibility (optional)
+    # Set random seed for reproducibility
     if args.seed is not None:
         np.random.seed(args.seed)
 
@@ -42,7 +116,7 @@ def main():
     ppvs = []
 
     for af in allele_fractions:
-        confusion_matrix, ppa, ppv, _ =
+        _, ppa, ppv, _ = \
         run_simulation_and_gather_metrics(num_pileups, 
                                           depth, 
                                           error_rate, 
