@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 import argparse
+import numpy as np
 from run_simulation import run_simulation_and_gather_metrics
 
 def plot_metrics(allele_fractions, ppas, ppvs):
@@ -34,14 +35,20 @@ def main():
     fv               = args.frac_pileups_with_var
 
     # Set random seed for reproducibility (optional)
-    if args.seed != None:
+    if args.seed is not None:
         np.random.seed(args.seed)
 
     ppas = []
     ppvs = []
 
     for af in allele_fractions:
-        confusion_matrix, ppa, ppv, specificity = run_simulation_and_gather_metrics(num_pileups, depth, error_rate, af, alt_threshold, fv)
+        confusion_matrix, ppa, ppv, _ =
+        run_simulation_and_gather_metrics(num_pileups, 
+                                          depth, 
+                                          error_rate, 
+                                          af, 
+                                          alt_threshold, 
+                                          fv)
         ppas.append(ppa)
         ppvs.append(ppv)
 
