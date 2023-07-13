@@ -84,7 +84,7 @@ def calculate_metrics(labels: np.ndarray, predictions: np.ndarray) -> tuple:
     """
     labels         = labels.astype('uint64')
     predictions    = predictions.astype('uint64')
-    true_positive  =  np.sum(labels & predictions)
+    true_positive  = np.sum(labels & predictions)
     false_positive = np.sum(~labels & predictions)
     true_negative  = np.sum(~labels & ~predictions)
     false_negative = np.sum(labels & ~predictions)
