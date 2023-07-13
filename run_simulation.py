@@ -48,7 +48,7 @@ Usage:
 
 Example:
     python run_simulation.py --num_pileups 10000 --mean_total_depth 300 
-    --mean_seq_error_rate 0.005 --frac_pileups_with_var 0.01 --af 0.2 0.4 0.6 
+    --mean_seq_error_rate 0.005 --frac_pileups_with_var 0.01 --af 0.2 
     --alt_threshold 2 --seed 123
 
 Author:
@@ -56,9 +56,9 @@ Author:
 """
 
 import argparse
+import timeit
 import numpy as np
 import psutil
-import timeit
 
 def get_available_memory() -> int:
     """
@@ -66,7 +66,8 @@ def get_available_memory() -> int:
     integer value.
 
     Returns:
-        int: The available memory as an integer value.
+        int: The available memory as an integer value. Uses only 60% of 
+        available memory
 
     """
     mem = psutil.virtual_memory()
@@ -105,11 +106,11 @@ def simulate_somatic_mutations(num_pileups: int,
 
     Args:
         num_pileups (int): The total number of pileups to be simulated.
-        depth (int): The read depth parameter for simulating mutations.
+        depth (int): Mean of the poisson distribution from which depth values are drawn.
         error_rate (float): The error rate for simulating sequencing noise.
         allele_fraction (float): The allele fraction for simulating mutation 
         reads.
-        fv (float): The frequency of mutation presence.
+        fv (float): The fraction of k pileups with a somatic mutation.
 
     Returns:
         tuple: A tuple containing the alt reads and the presence of mutations.
@@ -154,7 +155,7 @@ def run_simulation_and_gather_metrics(num_pileups: int,
         mutations.
         alt_threshold (float): The alternative allele threshold for determining 
         predictions.
-        fv (float): The fv parameter for simulating somatic mutations.
+        fv (float): The fraction of k pileups with a somatic variant 
 
     Returns:
         tuple: A tuple containing the confusion matrix, PPA (Positive Predictive
@@ -176,6 +177,10 @@ def run_simulation_and_gather_metrics(num_pileups: int,
                                                     allele_fraction,
                                                     fv)
         predictions = pileups >= alt_threshold
+        # tp -> True positives
+        # fp -> False positives
+        # fn -> False negatives
+        # tn -> True negatives
         tp, fp, tn, fn = calculate_metrics(labels, predictions)
         tp_sum += tp
         fp_sum += fp
@@ -222,7 +227,7 @@ def get_chunking_params(total_simulations):
     # Calculate the ideal chunk size based on available memory
     # Assuming 8 bytes per sample and 3 distributions per simulation
     ideal_chunk_size = min(total_simulations, available_memory // 24)
-   
+
     # Calculate the number of chunks and remaining simulations
     num_chunks = total_simulations // ideal_chunk_size
     print(f"Available memory: {available_memory}")
@@ -285,7 +290,7 @@ def main():
                             reproducible')
 
     args = parser.parse_args()
-    
+
     # Set simulation parameters
     num_pileups     = args.num_pileups
     depth           = args.mean_total_depth
@@ -298,7 +303,12 @@ def main():
     if args.seed is not None:
         np.random.seed(args.seed)
 
-
+    assert num_pileups >= 0
+    assert depth > 0
+    assert error_rate >= 0
+    assert allele_fraction >= 0
+    assert alt_threshold > 0
+    assert fv >= 0
 
     confusion_matrix, ppa, ppv, specificity = run_simulation_and_gather_metrics(
         num_pileups, 
