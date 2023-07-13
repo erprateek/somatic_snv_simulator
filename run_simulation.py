@@ -1,91 +1,210 @@
-import numpy as np
+#!/bin/python
+
 import argparse
+import numpy as np
 import psutil
 
-def get_available_memory():
-    mem = psutil.virtual_memory()
-    return mem.available
+def get_available_memory() -> int:
+    """
+    Retrieves the available memory on the system and returns 60% of it as an integer value.
 
-def simulate_somatic_mutations(num_pileups, depth, error_rate, allele_fraction, alt_threshold, fv):
+    Returns:
+        int: The available memory as an integer value.
+
+    """
+    mem = psutil.virtual_memory()
+    return int(mem.available*0.6)
+
+def calculate_metrics(labels: np.ndarray, predictions: np.ndarray) -> tuple:
+    """
+    Calculates various metrics based on the given labels and predictions.
+
+    Args:
+        labels (np.ndarray): An array of binary labels.
+        predictions (np.ndarray): An array of binary predictions.
+
+    Returns:
+        tuple: A tuple containing the true positive, false positive, true negative, and false negative counts.
+
+    """
+    labels         = labels.astype('uint64')
+    predictions    = predictions.astype('uint64')
+    true_positive  =  np.sum(labels & predictions)
+    false_positive = np.sum(~labels & predictions)
+    true_negative  = np.sum(~labels & ~predictions)
+    false_negative = np.sum(labels & ~predictions)
+
+    return true_positive, false_positive, true_negative, false_negative
+
+def simulate_somatic_mutations(num_pileups: int,
+                               depth: int,
+                               error_rate: float,
+                               allele_fraction: float,
+                               fv: float) -> tuple:
+    """
+    Simulates somatic mutations for a given number of pileups and returns the alt reads and mutation presence.
+
+    Args:
+        num_pileups (int): The total number of pileups to be simulated.
+        depth (int): The read depth parameter for simulating mutations.
+        error_rate (float): The error rate for simulating sequencing noise.
+        allele_fraction (float): The allele fraction for simulating mutation reads.
+        fv (float): The frequency of mutation presence.
+
+    Returns:
+        tuple: A tuple containing the alt reads and the presence of mutations.
+
+    """
     # Draw total read depth from a Poisson distribution
-    total_depth            = np.random.poisson(depth, size=num_pileups)
+    total_depth            = np.random.poisson(depth,
+                                               size=num_pileups).astype('uint8')
 
     # Draw sequencing noise from a Binomial distribution
-    noisy_alt_reads            = np.random.binomial(total_depth, error_rate)
+    noisy_alt_reads        = np.random.binomial(total_depth,
+                                                error_rate).astype('uint8')
 
     # Generate reads having mutation - Using 1 for True and 0 for False
-    has_mutation           = np.random.choice([True, False], size=num_pileups, p=[fv, 1-fv])
+    has_mutation           = np.random.choice([True, False],
+                                              size=num_pileups,
+                                              p=[fv, 1-fv]).astype('uint8')
 
-    somatic_mutation_reads = np.random.binomial(total_depth, allele_fraction)*has_mutation
+    somatic_mutation_reads = np.random.binomial(total_depth, 
+                                                allele_fraction).astype('uint8')*has_mutation
 
     total_alt_reads = noisy_alt_reads + somatic_mutation_reads
 
     return (total_alt_reads, has_mutation)
 
+def run_simulation_and_gather_metrics(num_pileups: int, 
+                                      depth: int, 
+                                      error_rate: float, 
+                                      allele_fraction: float, 
+                                      alt_threshold: float, 
+                                      fv: float) -> tuple:
+    """
+    Runs simulations of somatic mutations and gathers metrics based on the results.
 
-def calculate_confusion_matrix(labels, predictions):
-    true_positive  = np.sum(labels & predictions)
-    false_positive = np.sum(~labels & predictions)
-    true_negative  = np.sum(~labels & ~predictions)
-    false_negative = np.sum(labels & ~predictions)
+    Args:
+        num_pileups (int): The total number of pileups (simulations) to be processed.
+        depth (int): The depth parameter for simulating somatic mutations.
+        error_rate (float): The error rate for simulating somatic mutations.
+        allele_fraction (float): The allele fraction for simulating somatic mutations.
+        alt_threshold (float): The alternative allele threshold for determining predictions.
+        fv (float): The fv parameter for simulating somatic mutations.
 
-    confusion_matrix = np.array([[true_negative, false_positive], [false_negative, true_positive]])
-    return confusion_matrix
+    Returns:
+        tuple: A tuple containing the confusion matrix, PPA (Positive Predictive Accuracy), 
+               PPV (Positive Predictive Value), and specificity.
 
-def calculate_ppa(confusion_matrix):
-    true_positive = confusion_matrix[1, 1]
-    false_negative = confusion_matrix[1, 0]
+    """
+    num_chunks, chunk_size = get_chunking_params(num_pileups)
+    remaining_simulations  = num_pileups % chunk_size
+    tp_sum = fp_sum = tn_sum = fn_sum = 0
+    for cur_chunk in range(num_chunks):
+        print(f"\tProcessing {cur_chunk+1} out of {num_chunks} [{round((cur_chunk+1)*100/(num_chunks), 2)}%]", end='\r')
 
-    ppa = true_positive / (true_positive + false_negative)
-    return round(ppa*100, 2)
-
-def calculate_ppv(confusion_matrix):
-    true_positive = confusion_matrix[1, 1]
-    false_positive = confusion_matrix[0, 1]
-
-    ppv = true_positive / (true_positive + false_positive)
-    return round(ppv*100,2)
-
-def calculate_specificity(confusion_matrix):
-    true_negative = confusion_matrix[0, 0]
-    false_positive = confusion_matrix[0, 1]
-
-    specificity = true_negative / (true_negative + false_positive)
-    return round(specificity*100, 2)
-
-def run_simulation_and_gather_metrics(num_pileups, depth, error_rate, allele_fraction, alt_threshold, fv):
-    # Simulate somatic mutations
-    pileups, labels = simulate_somatic_mutations(num_pileups,
-                                                 depth,
-                                                 error_rate,
-                                                 allele_fraction,
-                                                 alt_threshold,
-                                                 fv)
-    predictions = pileups >= alt_threshold
-    confusion_matrix = calculate_confusion_matrix(labels, predictions)
-
-    # Calculate PPA, PPV, and Specificity
-    ppa = calculate_ppa(confusion_matrix)
-    ppv = calculate_ppv(confusion_matrix)
-    specificity = calculate_specificity(confusion_matrix)
+        # Simulate somatic mutations
+        pileups, labels = simulate_somatic_mutations(chunk_size,
+                                                    depth,
+                                                    error_rate,
+                                                    allele_fraction,
+                                                    fv)
+        predictions = pileups >= alt_threshold
+        tp, fp, tn, fn = calculate_metrics(labels, predictions)
+        tp_sum += tp
+        fp_sum += fp
+        tn_sum += tn
+        fn_sum += fn
+    if remaining_simulations > 0:
+        pileups, labels = simulate_somatic_mutations(remaining_simulations,
+                                                    depth,
+                                                    error_rate,
+                                                    allele_fraction,
+                                                    fv)
+        predictions = pileups >= alt_threshold
+        tp, fp, tn, fn = calculate_metrics(labels, predictions)
+        tp_sum += tp
+        fp_sum += fp
+        tn_sum += tn
+        fn_sum += fn
+    
+    confusion_matrix = np.array([[tn_sum, fp_sum], [fn_sum, tp_sum]])
+    ppa              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fn_sum))
+    ppv              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fp_sum))
+    specificity      = np.array(tn_sum) / (np.array(tn_sum) + np.array(fp_sum))
 
     # Print the results
     return (confusion_matrix, ppa, ppv, specificity)
 
+def get_chunking_params(total_simulations):
+    """
+    Determines the chunking parameters for processing a given number of simulations.
+
+    Args:
+        total_simulations (int): The total number of simulations to be processed.
+
+    Returns:
+        tuple: A tuple containing the number of chunks and the ideal chunk size.
+
+    """
+    # Get available memory
+    available_memory = get_available_memory()
+
+    # Calculate the ideal chunk size based on available memory
+    # Assuming 8 bytes per sample and 3 distributions per simulation
+    # TODO: to reduce this 8 by converting dtypes to uint8 instead of uint64
+    ideal_chunk_size = min(total_simulations, available_memory // 24)
+   
+    # Calculate the number of chunks and remaining simulations
+    num_chunks = total_simulations // ideal_chunk_size
+    print(f"Available memory: {available_memory}")
+    print(f"Automatically assessed ideal chunk size to be: {ideal_chunk_size}")
+    print(f"Inferred number of chunks to process: {num_chunks}")
+    return (num_chunks, ideal_chunk_size)
+
 def main():
+    """
+    Monte-Carlo simulation of somatic mutations in NGS data.
+
+    This function performs a Monte-Carlo simulation of somatic mutations in 
+    Next-Generation Sequencing (NGS) data. It takes command-line arguments 
+    to configure the simulation parameters and prints the resulting confusion 
+    matrix, PPA (Positive Predictive Accuracy), PPV (Positive Predictive 
+    Value), and specificity.
+
+    Command-line Arguments:
+        -k, --num_pileups:           Number of pileups to simulate.
+        -D, --mean_total_depth:      Mean of the Poisson distribution, from which depth values are drawn.
+        -e, --mean_seq_error_rate:   Average sequencing error rate. The number of ALT reads due to noise is drawn from the Binomial distribution.
+        -f, --frac_pileups_with_var: The fraction of pileups with a somatic variant.
+        -a, --af:                    The intrinsic Allele Fraction of somatic variants. The number of ALT reads due to a somatic variant is drawn from the Binomial distribution.
+        -t, --alt_threshold:         The minimum number of ALTs to trigger a detection.
+        -s, --seed:                  Use a fixed seed to make the script reproducible.
+
+    """
     parser = argparse.ArgumentParser("Monte-Carlo simulation of somatic mutations in NGS data.")
-    parser.add_argument('-k','--num_pileups',          type=int,   help='Number of pileups to simulate')
-    parser.add_argument('-D','--mean_total_depth',     type=float, help='Mean of the Poisson distribution, from which depth values are drawn')
-    parser.add_argument('-e','--mean_seq_error_rate',  type=float, help='Average sequencing error rate. The number of ALT reads due to noise is drawn from BD(D,e)')
-    parser.add_argument('-f','--frac_pileups_with_var',type=float, help='The fraction of k pileups with a somatic variant')
-    parser.add_argument('-a','--af',                   type=float, help='The intrinsic Allele Fraction of somatic variants. The number of ALT reads due to a somatic variant is drawn from BD(D,AF)')
-    parser.add_argument('-t','--alt_threshold',        type=int,   help='The minimum number of ALTs to trigger a detection')
-    parser.add_argument('-s','--seed',                 type=int,   help='Use a fixed seed to make the script reproducible')
+    parser.add_argument('-k','--num_pileups',          type=int,
+                        help='Number of pileups to simulate')
+    parser.add_argument('-D','--mean_total_depth',     type=float,
+                        help="Mean of the Poisson distribution, \
+                            from which depth values are drawn")
+    parser.add_argument('-e','--mean_seq_error_rate',  type=float,
+                        help="Average sequencing error rate.\
+                        The number of ALT reads due to noise is drawn from BD(D,e)")
+    parser.add_argument('-f','--frac_pileups_with_var',type=float,
+                        help='The fraction of k pileups with a somatic variant')
+    parser.add_argument('-a','--af',                   type=float, 
+                        help="""The intrinsic Allele Fraction of somatic variants.
+                        The number of ALT reads due to a somatic variant is drawn from BD(D,AF)""")
+    parser.add_argument('-t','--alt_threshold',        type=int,
+                        help='The minimum number of ALTs to trigger a detection')
+    parser.add_argument('-s','--seed',                 type=int,
+                        help='Use a fixed seed to make the script reproducible')
 
     args = parser.parse_args()
     
     # Set simulation parameters
-    num_pileups     = args.num_pileups 
+    num_pileups     = args.num_pileups
     depth           = args.mean_total_depth
     error_rate      = args.mean_seq_error_rate
     allele_fraction = args.af
@@ -93,13 +212,21 @@ def main():
     fv              = args.frac_pileups_with_var
 
     # Set random seed for reproducibility (optional)
-    if args.seed != None:
+    if args.seed is not None:
         np.random.seed(args.seed)
 
-    confusion_matrix, ppa, ppv, specificity = run_simulation_and_gather_metrics(num_pileups, depth, error_rate, allele_fraction, alt_threshold, fv)
+
+
+    confusion_matrix, ppa, ppv, specificity = run_simulation_and_gather_metrics(
+        num_pileups, 
+        depth,
+        error_rate, 
+        allele_fraction, 
+        alt_threshold, 
+        fv)
     print("Confusion matrix: ")
     print(confusion_matrix)
-    print(f"PPA: {ppa}, PPV: {ppv}, Specificity: {specificity}")
+    print(f"PPA: {round(ppa*100, 2)}%, \t PPV: {round(ppv*100, 2)}%, \t Specificity: {round(specificity*100, 2)}%")
     print("="*80)
 
 if __name__ == '__main__':
