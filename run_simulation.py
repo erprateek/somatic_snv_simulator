@@ -1,5 +1,7 @@
 #!/bin/python
 """
+Script Name: run_simulation.py
+
 Monte-Carlo simulation of somatic mutations in NGS data.
 
 This script performs a Monte-Carlo simulation of somatic mutations in 
@@ -256,27 +258,27 @@ def main():
     """
     parser = argparse.ArgumentParser("Monte-Carlo simulation of somatic \
                                      mutations in NGS data.")
-    parser.add_argument('-k','--num_pileups',          type=int,
+    parser.add_argument('-k','--num_pileups',          type=int, required=True,
                         help='Number of pileups to simulate')
-    parser.add_argument('-D','--mean_total_depth',     type=float,
+    parser.add_argument('-D','--mean_total_depth',     type=float, required=True,
                         help="Mean of the Poisson distribution, \
                             from which depth values are drawn")
-    parser.add_argument('-e','--mean_seq_error_rate',  type=float,
+    parser.add_argument('-e','--mean_seq_error_rate',  type=float, required=True,
                         help="Average sequencing error rate.\
                         The number of ALT reads due to noise is drawn from \
                             BD(D,e)")
-    parser.add_argument('-f','--frac_pileups_with_var',type=float,
+    parser.add_argument('-f','--frac_pileups_with_var',type=float, required=True, 
                         help='The fraction of k pileups with a somatic\
                             variant')
-    parser.add_argument('-a','--af',                   type=float, 
+    parser.add_argument('-a','--af',                   type=float, required=True,
                         help="""The intrinsic Allele Fraction of somatic\
                             variants.
                         The number of ALT reads due to a somatic variant \
                             is drawn from BD(D,AF)""")
-    parser.add_argument('-t','--alt_threshold',        type=int,
+    parser.add_argument('-t','--alt_threshold',        type=int, required=True,
                         help='The minimum number of ALTs to trigger a \
                             detection')
-    parser.add_argument('-s','--seed',                 type=int,
+    parser.add_argument('-s','--seed',                 type=int, required=False,
                         help='Use a fixed seed to make the script \
                             reproducible')
 

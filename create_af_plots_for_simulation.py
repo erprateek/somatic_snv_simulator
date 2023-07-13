@@ -1,20 +1,9 @@
 #!/bin/python
 """
-Script Name: somatic_mutations.py
+Script Name: create_af_plots_for_simulation.py
 
 Description:
     Monte-Carlo simulation of somatic mutations in NGS data - AF plots version
-
-Author:
-    Prateek Tandon (prateektandon@alumni.cmu.edu)
-
-Dependencies:
-    - matplotlib
-    - numpy
-    - run_simulation
-
-Usage:
-    python somatic_mutations.py [arguments]
 
 Command-line Arguments:
     -k, --num_pileups:           Number of pileups to simulate 
@@ -34,6 +23,17 @@ Command-line Arguments:
     detection (default: 2).
     -s, --seed:                  Use a fixed seed to make the script 
     reproducible.
+    
+Author:
+    Prateek Tandon (prateektandon@alumni.cmu.edu)
+
+Dependencies:
+    - matplotlib
+    - numpy
+    - run_simulation
+
+Usage:
+    python create_af_plots_for_simulation.py [arguments]
 
 """
 import argparse
