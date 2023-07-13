@@ -5,7 +5,7 @@ import psutil
 
 def get_available_memory():
     mem = psutil.virtual_memory()
-    return mem.available
+    return int(mem.available*0.8)
 
 def simulate_somatic_mutations_chunk(chunk_size, depth, error_rate, allele_fraction, alt_threshold, fv):
     # Simulate total read depth from a Poisson distribution
@@ -61,7 +61,7 @@ available_memory = get_available_memory()
 
 # Calculate the ideal chunk size based on available memory
 total_simulations = args.num_simulations
-ideal_chunk_size = min(total_simulations, available_memory // 8)  # Assuming 8 bytes per sample
+ideal_chunk_size = min(total_simulations, available_memory // 24)  # Assuming 8 bytes per sample
 
 # Calculate the number of chunks and remaining simulations
 num_chunks = total_simulations // ideal_chunk_size
