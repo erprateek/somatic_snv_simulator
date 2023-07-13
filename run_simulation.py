@@ -58,6 +58,7 @@ Author:
 import argparse
 import numpy as np
 import psutil
+import timeit
 
 def get_available_memory() -> int:
     """
@@ -256,6 +257,7 @@ def main():
         reproducible.
 
     """
+    start_time = timeit.default_timer()
     parser = argparse.ArgumentParser("Monte-Carlo simulation of somatic \
                                      mutations in NGS data.")
     parser.add_argument('-k','--num_pileups',          type=int, required=True,
@@ -310,6 +312,9 @@ def main():
     print(f"PPA: {round(ppa*100, 2)}%, \t PPV: {round(ppv*100, 2)}%, \t \
         Specificity: {round(specificity*100, 2)}%")
     print("="*80)
+    end_time = timeit.default_timer() - start_time
+    print(f"Finished simulating {args.num_pileups} pileups in {end_time} seconds")
+
 
 if __name__ == '__main__':
     main()

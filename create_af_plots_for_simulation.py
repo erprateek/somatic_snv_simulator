@@ -58,10 +58,6 @@ def plot_metrics(allele_fractions: np.ndarray,
     """
     plt.plot(allele_fractions, ppas, label='PPA', marker='o')
     plt.plot(allele_fractions, ppvs, label='PPV', marker='x')
-    for x, y, z in zip(allele_fractions, ppas, ppvs):
-        plt.axvline(x=x, color='b', linestyle='--', alpha=0.15)
-        plt.axhline(y=y, color='g', linestyle='--', alpha=0.15)
-        plt.axhline(y=z, color='#FFA500', linestyle='--', alpha=0.15)
     plt.xlabel('Allele Fraction')
     plt.ylabel('Score')
     plt.title('PPA and PPV as a function of the somatic AF')
