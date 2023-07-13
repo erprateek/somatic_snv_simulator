@@ -200,9 +200,9 @@ def run_simulation_and_gather_metrics(num_pileups: int,
         fn_sum += fn
 
     confusion_matrix = np.array([[tn_sum, fp_sum], [fn_sum, tp_sum]])
-    ppa              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fn_sum))
-    ppv              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fp_sum))
-    specificity      = np.array(tn_sum) / (np.array(tn_sum) + np.array(fp_sum))
+    ppa              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fn_sum)+1)
+    ppv              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fp_sum)+1)
+    specificity      = np.array(tn_sum) / (np.array(tn_sum) + np.array(fp_sum)+1)
 
     # Print the results
     return (confusion_matrix, ppa, ppv, specificity)
@@ -303,7 +303,7 @@ def main():
     if args.seed is not None:
         np.random.seed(args.seed)
 
-    assert num_pileups >= 0
+    assert num_pileups > 0
     assert depth > 0
     assert error_rate >= 0
     assert allele_fraction >= 0
