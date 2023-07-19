@@ -59,6 +59,7 @@ import argparse
 import timeit
 import numpy as np
 import psutil
+from matplotlib import pyplot as plt
 #from sklearn.metrics import confusion_matrix
 
 
@@ -122,22 +123,30 @@ def simulate_somatic_mutations(num_pileups: int,
     """
     # Draw total read depth from a Poisson distribution
     total_depth            = np.random.poisson(depth,
-                                               size=num_pileups).astype('uint8')
-
+                                               size=num_pileups).astype('uint16')
+    
     # Draw sequencing noise from a Binomial distribution
     noisy_alt_reads        = np.random.binomial(total_depth,
-                                                error_rate).astype('uint8')
+                                                error_rate).astype('uint16')
 
     # Generate reads having mutation - Using 1 for True and 0 for False
     has_mutation           = np.random.choice([True, False],
                                               size=num_pileups,
-                                              p=[fv, 1-fv]).astype('uint8')
+                                              p=[fv, 1-fv]).astype('uint16')
 
     somatic_mutation_reads = np.random.binomial(total_depth,
-                                                allele_fraction).astype('uint8')*has_mutation
+                                                allele_fraction).astype('bool')*has_mutation
+    
+    
+    #plt.plot(total_depth, color='red', label='Total depth')
+    #plt.plot(noisy_alt_reads, color='blue', label='Noisy ALT reads')
+    #plt.plot(somatic_mutation_reads, color='green', label='Somatic mutation reads')
 
     total_alt_reads = noisy_alt_reads + somatic_mutation_reads
-
+    #af = np.sum(somatic_mutation_reads)/len(total_depth)
+    #print(af)
+    #plt.plot(af, color='blue', label ='AF')
+    #plt.show()
     return (total_alt_reads, has_mutation)
 
 def run_simulation_and_gather_metrics(num_pileups: int,
