@@ -1,5 +1,6 @@
+
 # Runtime information
-(psnl310) C:\Users\erpra\git\somatic_snv_simulator>time
+```(psnl310) C:\Users\erpra\git\somatic_snv_simulator>time
 The current time is: 20:02:17.59
 (psnl310) C:\Users\erpra\git\somatic_snv_simulator>python run_simulation.py -k 3000000000 -D 300 -e 0.005 -f 0.01 -t 2 -s 42 -a 0.05
 Available memory: 4036136140
@@ -14,3 +15,4 @@ Finished simulating 3000000000 pileups in 747.6695473 seconds
 
 (psnl310) C:\Users\erpra\git\somatic_snv_simulator>time
 The current time is: 20:19:32.26
+```
