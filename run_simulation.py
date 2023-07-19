@@ -59,9 +59,6 @@ import argparse
 import timeit
 import numpy as np
 import psutil
-from matplotlib import pyplot as plt
-#from sklearn.metrics import confusion_matrix
-
 
 def get_available_memory() -> int:
     """
@@ -95,9 +92,9 @@ def calculate_metrics(labels: np.ndarray, predictions: np.ndarray) -> tuple:
     false_positive = np.sum((labels == 0) & (predictions == 1))
     true_negative  = np.sum((labels == 0) & (predictions == 0))
     false_negative = np.sum((labels == 1) & (predictions == 0))
-    print(f"Len labels: {len(labels)} ... {labels[0:10]}")
-    print(f"Len predictions: {len(predictions)} ... {predictions[0:10]}")
-    print(true_positive, false_positive, true_negative, false_negative)
+    #print(f"Len labels: {len(labels)} ... {labels[0:10]}")
+    #print(f"Len predictions: {len(predictions)} ... {predictions[0:10]}")
+    #print(true_positive, false_positive, true_negative, false_negative)
     return true_positive, false_positive, true_negative, false_negative
 
 def simulate_somatic_mutations(num_pileups: int,
@@ -213,15 +210,15 @@ def run_simulation_and_gather_metrics(num_pileups: int,
         fn_sum += fn
     #print(f"Num pileups: {num_pileups}")
     #print(f"Num chunks: {num_chunks}")
-    print(f"Total events - TP ({tp_sum}), TN ({tn_sum}), FP ({fp_sum}), FN ({fn_sum})")
-    assert tp_sum+tn_sum+fp_sum+fn_sum == num_pileups
+    #print(f"Total events - TP ({tp_sum}), TN ({tn_sum}), FP ({fp_sum}), FN ({fn_sum})")
+    assert tp_sum+fp_sum+fn_sum == num_pileups-tn_sum
 
     confusion_matrix = np.array([[tp_sum, fp_sum], [fn_sum, tn_sum]])
-    ppa              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fn_sum)+1)
-    ppv              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fp_sum)+1)
-    specificity      = np.array(tn_sum) / (np.array(tn_sum) + np.array(fp_sum)+1)
+    ppa              = np.array(tp_sum).astype('uint64') / (np.array(tp_sum).astype('uint64') + np.array(fn_sum).astype('uint64')+1)
+    ppv              = np.array(tp_sum).astype('uint64') / (np.array(tp_sum).astype('uint64') + np.array(fp_sum).astype('uint64')+1)
+    specificity      = np.array(tn_sum).astype('uint64') / (np.array(tn_sum).astype('uint64') + np.array(fp_sum).astype('uint64')+1)
 
-    # Print the results
+    # Return the results
     return (confusion_matrix, ppa, ppv, specificity)
 
 def get_chunking_params(total_simulations):
@@ -243,7 +240,7 @@ def get_chunking_params(total_simulations):
 
     # Calculate the ideal chunk size based on available memory
     # Assuming 8 bytes per sample and 3 distributions per simulation
-    ideal_chunk_size = min(total_simulations, available_memory // 24)
+    ideal_chunk_size = min(total_simulations, available_memory // 48)
 
     # Calculate the number of chunks and remaining simulations
     num_chunks = total_simulations // ideal_chunk_size
