@@ -59,6 +59,8 @@ import argparse
 import timeit
 import numpy as np
 import psutil
+#from sklearn.metrics import confusion_matrix
+
 
 def get_available_memory() -> int:
     """
@@ -88,11 +90,13 @@ def calculate_metrics(labels: np.ndarray, predictions: np.ndarray) -> tuple:
     """
     labels         = labels.astype('uint64')
     predictions    = predictions.astype('uint64')
-    true_positive  = np.sum(labels & predictions)
-    false_positive = np.sum(~labels & predictions)
-    true_negative  = np.sum(~labels & ~predictions)
-    false_negative = np.sum(labels & ~predictions)
-
+    true_positive  = np.sum((labels == 1) & (predictions == 1))
+    false_positive = np.sum((labels == 0) & (predictions == 1))
+    true_negative  = np.sum((labels == 0) & (predictions == 0))
+    false_negative = np.sum((labels == 1) & (predictions == 0))
+    print(f"Len labels: {len(labels)} ... {labels[0:10]}")
+    print(f"Len predictions: {len(predictions)} ... {predictions[0:10]}")
+    print(true_positive, false_positive, true_negative, false_negative)
     return true_positive, false_positive, true_negative, false_negative
 
 def simulate_somatic_mutations(num_pileups: int,
@@ -198,8 +202,12 @@ def run_simulation_and_gather_metrics(num_pileups: int,
         fp_sum += fp
         tn_sum += tn
         fn_sum += fn
+    #print(f"Num pileups: {num_pileups}")
+    #print(f"Num chunks: {num_chunks}")
+    print(f"Total events - TP ({tp_sum}), TN ({tn_sum}), FP ({fp_sum}), FN ({fn_sum})")
+    assert tp_sum+tn_sum+fp_sum+fn_sum == num_pileups
 
-    confusion_matrix = np.array([[tn_sum, fp_sum], [fn_sum, tp_sum]])
+    confusion_matrix = np.array([[tp_sum, fp_sum], [fn_sum, tn_sum]])
     ppa              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fn_sum)+1)
     ppv              = np.array(tp_sum) / (np.array(tp_sum) + np.array(fp_sum)+1)
     specificity      = np.array(tn_sum) / (np.array(tn_sum) + np.array(fp_sum)+1)
